@@ -13,6 +13,7 @@ function loadLabeledImages() {
     'Thor',
     'Tony Stark',
     'Rodrigo',
+    'Lucas',
   ];
 
   return Promise.all(
