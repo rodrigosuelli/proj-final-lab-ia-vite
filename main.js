@@ -67,7 +67,9 @@ video.addEventListener('play', async () => {
       faceMatcher.findBestMatch(d.descriptor)
     );
 
-    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+    canvas
+      .getContext('2d', { willReadFrequently: true })
+      .clearRect(0, 0, canvas.width, canvas.height);
 
     results.forEach((result, i) => {
       const box = resizedDetections[i].detection.box;
