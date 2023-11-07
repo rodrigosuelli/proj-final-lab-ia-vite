@@ -1,7 +1,7 @@
 import './style.css';
 import * as faceapi from 'face-api.js';
 
-const imageUpload = document.getElementById('imageUpload');
+const video = document.getElementById('video');
 
 function loadLabeledImages() {
   const labels = [
@@ -37,38 +37,37 @@ function loadLabeledImages() {
   );
 }
 
-async function start() {
-  const container = document.createElement('div');
-  container.style.position = 'relative';
-  document.body.append(container);
+function startVideo() {
+  navigator.getUserMedia(
+    { video: {} },
+    (stream) => (video.srcObject = stream),
+    (err) => console.error(err)
+  );
+}
+
+video.addEventListener('play', async () => {
+  const canvas = faceapi.createCanvasFromMedia(video);
+  const appDiv = document.getElementById('app');
+  appDiv.append(canvas);
+  const displaySize = { width: video.width, height: video.height };
+  faceapi.matchDimensions(canvas, displaySize);
 
   const labeledFaceDescriptors = await loadLabeledImages();
   const faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.6);
 
-  let image;
-  let canvas;
-  document.body.append('Loaded');
-
-  imageUpload.addEventListener('change', async () => {
-    if (image) image.remove();
-    if (canvas) canvas.remove();
-
-    image = await faceapi.bufferToImage(imageUpload.files[0]);
-    container.append(image);
-    canvas = faceapi.createCanvasFromMedia(image);
-    container.append(canvas);
-
-    const displaySize = { width: image.width, height: image.height };
-    faceapi.matchDimensions(canvas, displaySize);
-
+  setInterval(async () => {
     const detections = await faceapi
-      .detectAllFaces(image)
+      .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
       .withFaceLandmarks()
-      .withFaceDescriptors();
+      .withFaceDescriptors()
+      .withFaceExpressions();
     const resizedDetections = faceapi.resizeResults(detections, displaySize);
+
     const results = resizedDetections.map((d) =>
       faceMatcher.findBestMatch(d.descriptor)
     );
+
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
 
     results.forEach((result, i) => {
       const box = resizedDetections[i].detection.box;
@@ -77,15 +76,17 @@ async function start() {
       });
       drawBox.draw(canvas);
     });
-  });
-}
+
+    // faceapi.draw.drawDetections(canvas, resizedDetections);
+    faceapi.draw.drawFaceLandmarks(canvas, resizedDetections);
+    faceapi.draw.drawFaceExpressions(canvas, resizedDetections);
+  }, 100);
+});
 
 Promise.all([
-  // Recognition
   faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
   faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
   faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
-  // Detection (In development)
   faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
   faceapi.nets.faceExpressionNet.loadFromUri('/models'),
-]).then(start);
+]).then(startVideo);
