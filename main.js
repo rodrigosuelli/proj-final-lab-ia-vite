@@ -12,6 +12,7 @@ function loadLabeledImages() {
     'Jim Rhodes',
     'Thor',
     'Tony Stark',
+    'Rodrigo',
   ];
 
   return Promise.all(
